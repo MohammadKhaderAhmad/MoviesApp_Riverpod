@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:moveis/models/movie_model.dart';
 import 'package:moveis/providers/search_provider.dart';
 import 'package:moveis/screens/watched_movies_page.dart';
@@ -8,7 +9,8 @@ import 'package:moveis/screens/watch_later_page.dart';
 import 'movie_details_page.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
-  const SearchPage({super.key});
+  final int tabIndex;
+  const SearchPage({super.key, this.tabIndex = 0});
 
   @override
   ConsumerState<SearchPage> createState() => _SearchPageState();
@@ -22,6 +24,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.tabIndex;
     _scrollController.addListener(() {
       final provider = ref.read(movieSearchProvider.notifier);
       if (_scrollController.position.pixels >=
@@ -34,17 +37,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(movieSearchProvider);
+    final provider = ref.read(movieSearchProvider.notifier);
 
-  Widget _buildBody() {
+    Widget bodyContent;
     if (_selectedIndex == 0) {
-      final state = ref.watch(movieSearchProvider);
-      final provider = ref.read(movieSearchProvider.notifier);
-      return state.when(
+      bodyContent = state.when(
         loading:
             () => const Center(
               child: CircularProgressIndicator(color: Colors.red),
@@ -148,14 +148,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               ),
                               IconButton(
                                 onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) =>
-                                              MovieDetailsPage(movie: movie),
-                                    ),
-                                  );
+                                  context.push('/details', extra: movie);
                                 },
                                 icon: const Icon(
                                   Icons.remove_red_eye,
@@ -170,14 +163,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     ),
       );
     } else if (_selectedIndex == 1) {
-      return const WatchedMoviesPage();
+      bodyContent = const WatchedMoviesPage();
     } else {
-      return const WatchLaterPage();
+      bodyContent = const WatchLaterPage();
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF141414),
       appBar:
@@ -212,14 +202,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 ),
               )
               : null,
-      body: _buildBody(),
+      body: bodyContent,
       bottomNavigationBar: NavigationBar(
         height: 60,
         backgroundColor: const Color(0xFF000000),
         indicatorColor: const Color(0xFFE50914),
         surfaceTintColor: Colors.transparent,
         selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
+        onDestinationSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.search),
