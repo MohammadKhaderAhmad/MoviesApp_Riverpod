@@ -6,7 +6,8 @@ import 'package:moveis/models/movie_model.dart';
 import 'package:moveis/providers/search_provider.dart';
 import 'package:moveis/screens/watched_movies_page.dart';
 import 'package:moveis/screens/watch_later_page.dart';
-import 'movie_details_page.dart';
+import 'package:moveis/widgets/movie_list_item.dart';
+import 'package:moveis/widgets/search_app_bar.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   final int tabIndex;
@@ -37,6 +38,52 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
+  Widget _buildSearchBody(
+    AsyncValue<List<Movie>> state,
+    MovieSearchNotifier provider,
+  ) {
+    return state.when(
+      loading:
+          () =>
+              const Center(child: CircularProgressIndicator(color: Colors.red)),
+      error:
+          (e, _) => Center(
+            child: Text(
+              'Error: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+      data:
+          (movies) =>
+              movies.isEmpty
+                  ? const Center(
+                    child: Text(
+                      "No results found",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
+                  : ListView.builder(
+                    controller: _scrollController,
+                    itemCount: movies.length + (provider.hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == movies.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Center(
+                            child: CircularProgressIndicator(color: Colors.red),
+                          ),
+                        );
+                      }
+                      final movie = movies[index];
+                      return MovieListItem(
+                        movie: movie,
+                        onTap: () => context.push('/details', extra: movie),
+                      );
+                    },
+                  ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(movieSearchProvider);
@@ -44,124 +91,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     Widget bodyContent;
     if (_selectedIndex == 0) {
-      bodyContent = state.when(
-        loading:
-            () => const Center(
-              child: CircularProgressIndicator(color: Colors.red),
-            ),
-        error:
-            (e, _) => Center(
-              child: Text(
-                'Error: $e',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-        data:
-            (movies) =>
-                movies.isEmpty
-                    ? const Center(
-                      child: Text(
-                        "No results found",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    )
-                    : ListView.builder(
-                      controller: _scrollController,
-                      itemCount: movies.length + (provider.hasMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == movies.length) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.red,
-                              ),
-                            ),
-                          );
-                        }
-                        final movie = movies[index];
-                        return Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF222222),
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.4),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CachedNetworkImage(
-                                imageUrl: movie.poster,
-                                width: 80,
-                                height: 120,
-                                fit: BoxFit.cover,
-                                errorWidget:
-                                    (context, url, error) => const Icon(
-                                      Icons.broken_image,
-                                      color: Colors.white,
-                                    ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      movie.title,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      movie.year,
-                                      style: const TextStyle(
-                                        color: Color(0xFFB3B3B3),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      movie.type.toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Color(0xFFB3B3B3),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  context.push('/details', extra: movie);
-                                },
-                                icon: const Icon(
-                                  Icons.remove_red_eye,
-                                  color: Color(0xFFE50914),
-                                ),
-                                tooltip: 'View Details',
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-      );
+      bodyContent = _buildSearchBody(state, provider);
     } else if (_selectedIndex == 1) {
       bodyContent = const WatchedMoviesPage();
     } else {
@@ -171,37 +101,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF141414),
       appBar:
-          _selectedIndex == 0
-              ? AppBar(
-                backgroundColor: Colors.black,
-                elevation: 0,
-                title: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: TextField(
-                    controller: _controller,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: "Search for movies...",
-                      hintStyle: TextStyle(color: Color(0xFFB3B3B3)),
-                      border: InputBorder.none,
-                      prefixIcon: Icon(Icons.search, color: Color(0xFFB3B3B3)),
-                      contentPadding: EdgeInsets.all(10),
-                    ),
-                    onSubmitted: (value) {
-                      ref
-                          .read(movieSearchProvider.notifier)
-                          .searchMovies(
-                            value.isEmpty ? "movies" : value,
-                            reset: true,
-                          );
-                    },
-                  ),
-                ),
-              )
-              : null,
+          _selectedIndex == 0 ? SearchAppBar(controller: _controller) : null,
       body: bodyContent,
       bottomNavigationBar: NavigationBar(
         height: 60,

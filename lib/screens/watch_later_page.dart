@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moveis/providers/watch_later_provider.dart';
+import 'package:moveis/widgets/later_movie_list_tile.dart';
 
 class WatchLaterPage extends ConsumerStatefulWidget {
   const WatchLaterPage({super.key});
@@ -40,43 +41,10 @@ class _WatchLaterPageState extends ConsumerState<WatchLaterPage> {
                 itemCount: watchLaterMovies.length,
                 itemBuilder: (context, index) {
                   final movie = watchLaterMovies[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF222222),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(12),
-                      leading:
-                          movie['Poster'] != null
-                              ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  movie['Poster'],
-                                  width: 60,
-                                  height: 90,
-                                  fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (_, __, ___) => const Icon(
-                                        Icons.broken_image,
-                                        color: Colors.white,
-                                      ),
-                                ),
-                              )
-                              : null,
-                      title: Text(
-                        movie['Title'] ?? 'No Title',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      trailing: IconButton(
-                        onPressed: () => notifier.delete(index),
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                      ),
-                    ),
+                  return MovieListTile(
+                    title: movie['Title'] ?? 'No Title',
+                    posterUrl: movie['Poster'],
+                    onDelete: () => notifier.delete(index),
                   );
                 },
               ),
